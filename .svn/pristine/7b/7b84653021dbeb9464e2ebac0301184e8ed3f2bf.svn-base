@@ -1,0 +1,25 @@
+#oracle version database settings
+#jdbc.driver=oracle.jdbc.driver.OracleDriver
+#jdbc.driver=com.ibm.db2.jcc.DB2Driver
+jdbc.driver=com.mysql.jdbc.Driver
+
+#jdbc.url=jdbc:oracle:thin:@172.20.38.104:1521:orcl
+#jdbc.url=jdbc:db2://10.8.6.27:60052/ebank
+jdbc.url=jdbc:mysql://127.0.0.1/test?useUnicode=true&characterEncoding=utf-8
+
+jdbc.username=root
+#jdbc.username=platform
+jdbc.password=
+
+#hibernate.dialect=org.hibernate.dialect.Oracle10gDialect
+#hibernate.dialect=org.hibernate.dialect.DB2Dialect
+hibernate.dialect=org.hibernate.dialect.MySQL5InnoDBDialect
+ 
+#hibernate settings
+hibernate.show_sql=true
+hibernate.format_sql=false
+hibernate.hbm2ddl.auto=none
+
+#dbcp settings
+dbcp.maxIdle=5
+dbcp.maxActive=40

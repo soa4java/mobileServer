@@ -1,0 +1,21 @@
+#客户端与服务端调试模式（安全校验）
+#ture 调试模式，false 应用模式
+Client_debug_mode=true
+#是否启用接口报文加密
+messageEncrypt=false
+#后台http服务URL http://192.168.8.189:9083/perbank/
+BACKEND_HTTP_URL=http://127.0.0.1:9084/perbank/
+#BACKEND_HTTP_URL=http://172.17.40.75:9084/perbank/
+#后台http服务最大连接数
+BACKEND_HTTP_MaxConnection=100
+#后台http服务读超时
+BACKEND_HTTP_Timeout=5000
+#微信银行渠道号（无需校验请求）
+NoCheck_channel=2501
+#action过滤器定义类型，file文件(适用于无数据库类型的mobileServer)，db数据库
+actions_filter_type=db
+#去除直接更新功能，该配置（direct_update_size）已失效
+#资源包文件大小，客户端后台直接更新，不提示1024*1024*100=104857600 byte
+direct_update_size=100
+#安全校验url列表,逗号分割：submitInnerTransfer.do,setLimit.do
+safeCheckList=submitInnerTransfer.do,setLimit.do

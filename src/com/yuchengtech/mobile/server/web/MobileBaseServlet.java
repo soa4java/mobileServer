@@ -1,0 +1,88 @@
+package com.yuchengtech.mobile.server.web;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.codehaus.jackson.JsonEncoding;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationContext;
+import org.springframework.web.context.support.WebApplicationContextUtils;
+
+import com.yuchengtech.mobile.console.entity.account.ActionsDef;
+import com.yuchengtech.mobile.console.service.account.ActionsDefManager;
+import com.yuchengtech.mobile.server.common.Constants;
+import com.yuchengtech.mobile.server.security.auth.CheckOnlineThread;
+import com.yuchengtech.mobile.server.web.controller.Controller;
+import com.yuchengtech.mobile.server.web.controller.ControllerFactory;
+import com.yuchengtech.mobile.server.web.view.View;
+/**
+ * 客户端统一接入类，有不同controller进行业务处理，结果有view展现。
+ * @author Administrator
+ * 
+ * 客户端启动过程安全校验：http://serverIP:port/mb.do
+ * 业务功能调用:http://serverIP:port/*.do
+ *
+ */
+public class MobileBaseServlet extends HttpServlet {
+	private static final Logger log = LoggerFactory
+			.getLogger(MobileBaseServlet.class);
+	 
+	@Override
+	public void init(ServletConfig config) throws ServletException {
+		// TODO Auto-generated method stub
+		super.init(config);
+		if(!Constants.actions_filter_type.equals("file")){
+		 ApplicationContext ctx = WebApplicationContextUtils.getWebApplicationContext(config.getServletContext());
+		 ActionsDefManager actionsDefManager = (ActionsDefManager) ctx.getBean("ActionsDefManager");
+		 List<ActionsDef> list= actionsDefManager.getAll();
+		 ControllerFactory.initControllerMap(list);
+		}
+		new Thread(new CheckOnlineThread()).start();
+	}
+	
+   
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("text/html;charset=UTF-8");
+        try {
+            String url = request.getRequestURL().substring(request.getRequestURL().lastIndexOf("/") + 1, request.getRequestURL().length());
+            Controller control = ControllerFactory.getController(url);
+            if(control==null){
+            	renderError("2010", "Invalid Request!", response);
+            	return ;
+            }
+            View view=control.execute(request,response); 
+            view.doView();
+        } catch (Exception e) {
+        	log.error("Process Error:", e);
+        } 
+    }
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        processRequest(request, response);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        processRequest(request, response);
+    }
+	protected void renderError(String code, String msg, HttpServletResponse response) throws IOException {
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("ec", code);
+		m.put("em", msg);
+		new ObjectMapper().getJsonFactory().createJsonGenerator(response.getOutputStream(), JsonEncoding.UTF8).writeObject(m);
+	}
+    
+}

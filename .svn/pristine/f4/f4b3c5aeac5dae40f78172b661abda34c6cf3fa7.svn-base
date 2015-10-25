@@ -1,0 +1,160 @@
+package com.yuchengtech.mobile.server.web.controller;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.codehaus.jackson.JsonEncoding;
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.JsonProcessingException;
+import org.codehaus.jackson.map.JsonMappingException;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public abstract class AbstractController implements Controller {
+	private static final Logger log = LoggerFactory
+			.getLogger(AbstractController.class);
+	protected HttpServletRequest request;
+	protected HttpServletResponse response;
+
+	protected Map<String, Object> getError(String code, String msg) {
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("ec", code);
+		m.put("em", msg);
+		return m;
+	}
+
+	protected Map<String, Object> getSuccess() {
+		Map<String, Object> m = new HashMap<String, Object>();
+		m.put("ec", "0");
+		m.put("em", " ");
+		return m;
+	}
+
+	protected void setCookie(String setCookie) {
+//		String setCookie=list.get(1).toString();
+		log.debug("....Set-Cookie:"+setCookie);
+		if(setCookie.indexOf(";")!=-1){
+			String ck[]=setCookie.split(";");
+			String cookie=ck[0];
+			String cookiePath=ck[1];
+			String cookiePath_=cookiePath.substring(0,cookiePath.indexOf("=")+1)+"/";
+			setCookie=cookie+";"+cookiePath_;
+		}
+		log.debug("....Set-Cookie:"+setCookie);
+		response.setHeader("Set-Cookie", setCookie);
+	}
+	
+	//获取请求参数，保存为Map<String,String>
+	protected Map<String, String> getReqValues() {
+		Map<String, String> vmap = new HashMap<String, String>();
+		Enumeration<String> e = request.getParameterNames();
+		while (e.hasMoreElements()) {
+			String name = e.nextElement();
+			String value1 = request.getParameter(name);
+			String value = value1;
+			/*
+			 * try { value = new String(value1.getBytes("ISO8859-1"), "UTF-8");
+			 * } catch (UnsupportedEncodingException e1) { // TODO
+			 * Auto-generated catch block e1.printStackTrace(); }
+			 */
+			vmap.put(name, value);
+		}
+		vmap.put("sourceip", request.getRemoteAddr());
+		String uri = request.getRequestURI();
+		uri = uri.substring(uri.lastIndexOf("/")+1);
+		vmap.put("action", uri);
+		log.debug("Request Parameter ["+uri+"]:"+vmap.toString());
+		return vmap;
+	}
+
+	protected String prepareParam(Map<String, String> paramMap) {
+		StringBuffer sb = new StringBuffer();
+		if (paramMap.isEmpty()) {
+			return "";
+		} else {
+			for (String key : paramMap.keySet()) {
+				String value = (String) paramMap.get(key);
+				if (sb.length() < 1) {
+					sb.append(key).append("=").append(value);
+				} else {
+					sb.append("&").append(key).append("=").append(value);
+				}
+			}
+			return sb.toString();
+		}
+	}	
+	
+	//获取json格式请求参数，转换为Map<String,String>
+	//将json转换为一级Map，key和value均为String，如果json是多级结构则将二级以下转为json string保存再value中
+	public Map<String,String> getJsonReqValues(String json) {
+		try {
+			ObjectMapper mapper = new ObjectMapper();  
+			Map<String, Map<String, Object>> maps = mapper.readValue(
+					json, Map.class);
+			
+			Map<String,String> result=new HashMap<String,String>();
+			
+			//遍历json转成的map，如果是多级结构则将二级以下转为json string保存再value中
+			java.util.Set<String> key = maps.keySet();
+			java.util.Iterator<String> iter = key.iterator();
+			while (iter.hasNext()) {
+				String field = iter.next();
+				System.out.println(field + ":" + maps.get(field));
+				Object value=maps.get(field);
+				if (value instanceof String) {
+					result.put(field, (String)value);
+				}else{
+					if (value instanceof Integer || value instanceof Long ) {
+						result.put(field, String.valueOf(value));
+					}else{
+						if (value instanceof Float || value instanceof Double) {
+							result.put(field, String.valueOf(value));
+						}else{
+//							result.put(field, writeMap2Json((Map<String,Object>)value));
+							//参数只能为String类型，不是String类型则报错
+							return null;
+						}
+					}
+				}
+			}
+			
+			//获取请求客户端的ip和接口地址
+			result.put("sourceip", request.getRemoteAddr());
+			String uri = request.getRequestURI();
+			uri = uri.substring(uri.lastIndexOf("/")+1);
+			result.put("action", uri);
+			
+			log.debug(result.toString());
+			return result;
+		} catch (JsonParseException e) {
+			e.printStackTrace();
+		} catch (JsonMappingException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	//将map转换为json字符串
+	public static String object2Json(Object obj) {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();  
+		try {
+			new ObjectMapper().getJsonFactory().createJsonGenerator(baos, JsonEncoding.UTF8).writeObject(obj);
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		String str = baos.toString();
+		return str;
+	}
+}
